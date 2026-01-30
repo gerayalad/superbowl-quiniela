@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy, Users, DollarSign, ChevronRight, ChevronLeft,
   X, Check, Info, Sparkles, Zap, Star, Crown, Gift,
-  Music, Flag, Target, Clock, Award, Copy, Shield, Ticket
+  Music, Flag, Target, Clock, Award, Copy, Shield, Ticket, LogOut
 } from 'lucide-react';
 import { questions, eventInfo, rules } from './data/questions';
 import LeaderboardScreen from './screens/LeaderboardScreen';
@@ -828,7 +828,7 @@ const LandingScreen = ({ onEnter }) => {
 // DASHBOARD SCREEN
 // ============================================
 
-const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderboard, onViewTicket, answeredCount }) => {
+const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderboard, onViewTicket, answeredCount, onLogout }) => {
   const { shouldReduceEffects } = useSafari();
   const [showRules, setShowRules] = useState(false);
   const potAmount = (participants + 1) * eventInfo.entryFee;
@@ -859,12 +859,22 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
         <header className="sticky top-0 z-20 glass-dark border-b border-white/5">
           <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
             <Logo size="small" />
-            <button
-              onClick={() => setShowRules(true)}
-              className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              <Info className="w-5 h-5 text-white/70" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowRules(true)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                title="Reglas"
+              >
+                <Info className="w-5 h-5 text-white/70" />
+              </button>
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-full bg-white/5 hover:bg-red-500/20 transition-colors"
+                title="Cerrar sesión"
+              >
+                <LogOut className="w-5 h-5 text-white/70 hover:text-red-400" />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -1816,6 +1826,12 @@ export default function App() {
     setScreen('dashboard');
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setPredictions({});
+    setScreen('landing');
+  };
+
   const handleAdmin = () => {
     setScreen('admin');
   };
@@ -1894,6 +1910,7 @@ export default function App() {
               onViewTicket={handleViewTicket}
               predictionsLocked={predictionsLocked}
               answeredCount={Object.keys(predictions).length}
+              onLogout={handleLogout}
             />
           </motion.div>
         )}
