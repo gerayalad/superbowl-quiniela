@@ -8,25 +8,6 @@ import { useSSE } from '../hooks/useSSE';
 import { getLeaderboard } from '../services/api';
 import { useSafari } from '../contexts/SafariContext';
 
-// Dummy users for demo visualization (10 pts per question, 20 pts for winner)
-const dummyUsers = [
-  { id: 'dummy-1', nickname: 'Carlos_MX', score: 150, correctCount: 14, position: 1 },
-  { id: 'dummy-2', nickname: 'Maria2026', score: 140, correctCount: 13, position: 2 },
-  { id: 'dummy-3', nickname: 'ElChamp', score: 130, correctCount: 12, position: 3 },
-  { id: 'dummy-4', nickname: 'PatriotsFan', score: 120, correctCount: 11, position: 4 },
-  { id: 'dummy-5', nickname: 'SeahawksLover', score: 110, correctCount: 10, position: 5 },
-  { id: 'dummy-6', nickname: 'TouchdownKing', score: 100, correctCount: 9, position: 6 },
-  { id: 'dummy-7', nickname: 'GrittyFan', score: 90, correctCount: 8, position: 7 },
-  { id: 'dummy-8', nickname: 'SuperBowlPro', score: 80, correctCount: 7, position: 8 },
-  { id: 'dummy-9', nickname: 'NFLMaster', score: 70, correctCount: 6, position: 9 },
-  { id: 'dummy-10', nickname: 'Quarterback99', score: 60, correctCount: 5, position: 10 },
-  { id: 'dummy-11', nickname: 'EndZoneHero', score: 50, correctCount: 4, position: 11 },
-  { id: 'dummy-12', nickname: 'FieldGoalKid', score: 40, correctCount: 3, position: 12 },
-  { id: 'dummy-13', nickname: 'HalftimeShow', score: 30, correctCount: 2, position: 13 },
-  { id: 'dummy-14', nickname: 'BlitzMaster', score: 20, correctCount: 1, position: 14 },
-  { id: 'dummy-15', nickname: 'RedZoneRookie', score: 10, correctCount: 1, position: 15 },
-];
-
 const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
   const { shouldReduceEffects } = useSafari();
   const [leaderboard, setLeaderboard] = useState([]);
@@ -42,15 +23,7 @@ const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
       setSettings(data.settingsUpdate);
     } else {
       if (data.leaderboard) {
-        // Combine real users with dummy users
-        const realUsers = data.leaderboard || [];
-        const combined = [...realUsers, ...dummyUsers];
-        combined.sort((a, b) => b.score - a.score);
-        const withPositions = combined.map((entry, index) => ({
-          ...entry,
-          position: index + 1
-        }));
-        setLeaderboard(withPositions);
+        setLeaderboard(data.leaderboard);
       }
       if (data.correctAnswers) setCorrectAnswers(data.correctAnswers);
       if (data.answeredQuestions !== undefined) setAnsweredQuestions(data.answeredQuestions);
@@ -64,18 +37,7 @@ const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
       setLoading(true);
       const data = await getLeaderboard();
 
-      // Combine real users with dummy users for demo
-      const realUsers = data.leaderboard || [];
-      const combined = [...realUsers, ...dummyUsers];
-
-      // Sort by score and reassign positions
-      combined.sort((a, b) => b.score - a.score);
-      const withPositions = combined.map((entry, index) => ({
-        ...entry,
-        position: index + 1
-      }));
-
-      setLeaderboard(withPositions);
+      setLeaderboard(data.leaderboard || []);
       setSettings(data.settings);
       setCorrectAnswers(data.correctAnswers || {});
       setAnsweredQuestions(data.answeredQuestions || 0);
