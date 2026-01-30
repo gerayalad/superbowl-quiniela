@@ -1311,11 +1311,43 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
 // TICKET SCREEN - FULL PREDICTIONS VIEW
 // ============================================
 
-const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditPredictions }) => {
+const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditPredictions, answersVisible, correctAnswers, predictionsLocked }) => {
   // localStorage keys are strings, so check both number and string keys
   const winner = predictions[14] || predictions['14'];
   const mvp = predictions[16] || predictions['16'];
-  const totalPoints = predictions[15] || predictions['15'];
+  const totalPointsPrediction = predictions[15] || predictions['15'];
+
+  // Calculate points earned
+  const getPointsForQuestion = (questionId) => {
+    // Question 14 (winner) is worth 2 points, others are 1 point
+    return questionId === 14 ? 2 : 1;
+  };
+
+  const calculateScore = () => {
+    if (!answersVisible || !correctAnswers) return { earned: 0, possible: 0, correct: 0, total: 0 };
+
+    let earned = 0;
+    let possible = 0;
+    let correctCount = 0;
+
+    questions.forEach(q => {
+      const userAnswer = predictions[q.id] || predictions[String(q.id)];
+      const correctAnswer = correctAnswers[q.id] || correctAnswers[String(q.id)];
+      const points = getPointsForQuestion(q.id);
+
+      if (correctAnswer) {
+        possible += points;
+        if (userAnswer === correctAnswer) {
+          earned += points;
+          correctCount++;
+        }
+      }
+    });
+
+    return { earned, possible, correct: correctCount, total: Object.keys(correctAnswers).length };
+  };
+
+  const score = calculateScore();
 
   const getCategoryIcon = (category) => {
     switch (category) {
@@ -1374,13 +1406,17 @@ const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditP
                 <ChevronLeft className="w-5 h-5 text-white" />
               </button>
               <Logo size="small" />
-              <button
-                onClick={onEditPredictions}
-                className="px-3 py-1.5 rounded-lg bg-sb-magenta/20 hover:bg-sb-magenta/30
-                         text-sb-magenta text-sm font-medium transition-colors"
-              >
-                Editar
-              </button>
+              {!predictionsLocked ? (
+                <button
+                  onClick={onEditPredictions}
+                  className="px-3 py-1.5 rounded-lg bg-sb-magenta/20 hover:bg-sb-magenta/30
+                           text-sb-magenta text-sm font-medium transition-colors"
+                >
+                  Editar
+                </button>
+              ) : (
+                <div className="w-16" />
+              )}
             </div>
           </div>
         </header>
@@ -1396,11 +1432,33 @@ const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditP
             <p className="text-white/50 text-sm">{nickname}</p>
           </motion.div>
 
+          {/* Score Card - Only when answers visible */}
+          {answersVisible && score.total > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <GlassCard className="p-4" neon>
+                <div className="text-center">
+                  <div className="text-white/50 text-sm mb-1">Mi Puntaje</div>
+                  <div className="text-4xl font-bold text-sb-magenta mb-2">
+                    {score.earned} <span className="text-white/40 text-xl">/ {score.possible}</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-4 text-sm">
+                    <span className="text-green-400">✓ {score.correct} correctas</span>
+                    <span className="text-red-400">✗ {score.total - score.correct} incorrectas</span>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+          )}
+
           {/* Summary Cards */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.15 }}
             className="grid grid-cols-3 gap-3"
           >
             <GlassCard className="p-3 text-center">
@@ -1429,7 +1487,7 @@ const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditP
                 <Target className="w-5 h-5 text-sb-cyan" />
               </div>
               <div className="text-[10px] text-white/50 mb-0.5">Puntos</div>
-              <div className="font-bold text-white text-xs truncate">{totalPoints}</div>
+              <div className="font-bold text-white text-xs truncate">{totalPointsPrediction}</div>
             </GlassCard>
           </motion.div>
 
@@ -1469,24 +1527,50 @@ const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditP
 
               <GlassCard className="divide-y divide-white/5">
                 {groupedQuestions[category]?.map((q, idx) => {
-                  const answer = predictions[q.id] || predictions[String(q.id)];
+                  const userAnswer = predictions[q.id] || predictions[String(q.id)];
+                  const correctAnswer = correctAnswers?.[q.id] || correctAnswers?.[String(q.id)];
+                  const hasCorrectAnswer = answersVisible && correctAnswer;
+                  const isCorrect = hasCorrectAnswer && userAnswer === correctAnswer;
+                  const isWrong = hasCorrectAnswer && userAnswer && userAnswer !== correctAnswer;
+                  const points = getPointsForQuestion(q.id);
+
                   return (
                     <div
                       key={q.id}
-                      className={`px-4 py-3 ${q.highlight ? 'bg-sb-magenta/5' : ''}`}
+                      className={`px-4 py-3 ${q.highlight ? 'bg-sb-magenta/5' : ''} ${isCorrect ? 'bg-green-500/5' : ''} ${isWrong ? 'bg-red-500/5' : ''}`}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-white/70 text-sm leading-snug">
                             {q.highlight && <Sparkles className="w-3 h-3 inline mr-1 text-yellow-400" />}
                             {q.question}
+                            {q.highlight && <span className="text-yellow-400 text-xs ml-1">(2 pts)</span>}
                           </p>
+                          {/* Show correct answer if wrong */}
+                          {isWrong && (
+                            <p className="text-green-400 text-xs mt-1">
+                              ✓ Correcta: {correctAnswer}
+                            </p>
+                          )}
                         </div>
-                        <div className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold
-                                      ${answer
-                                        ? 'bg-sb-cyan/20 text-sb-cyan border border-sb-cyan/30'
-                                        : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                          {answer || 'Sin respuesta'}
+                        <div className="flex flex-col items-end gap-1">
+                          {/* User's answer */}
+                          <div className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold
+                                        ${!userAnswer
+                                          ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                                          : isCorrect
+                                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                            : isWrong
+                                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                              : 'bg-sb-cyan/20 text-sb-cyan border border-sb-cyan/30'}`}>
+                            {userAnswer || 'Sin respuesta'}
+                          </div>
+                          {/* Points indicator */}
+                          {hasCorrectAnswer && (
+                            <div className={`text-xs font-bold ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+                              {isCorrect ? `+${points} pt${points > 1 ? 's' : ''}` : '0 pts'}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1750,6 +1834,9 @@ export default function App() {
               onRestart={handleRestart}
               onLeaderboard={handleLeaderboard}
               onEditPredictions={handleEditPredictions}
+              answersVisible={answersVisible}
+              correctAnswers={correctAnswers}
+              predictionsLocked={predictionsLocked}
             />
           </motion.div>
         )}
