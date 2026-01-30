@@ -271,9 +271,10 @@ const TeamBadge = ({ team, selected, onClick, isCorrect, isWrong, disabled }) =>
         bg-gradient-to-br ${gradient}
         border-2 transition-all duration-300
         ${borderClass}
-        ${disabled ? 'cursor-default' : ''}
+        ${disabled ? 'cursor-not-allowed pointer-events-none' : ''}
       `}
-      onClick={disabled ? undefined : onClick}
+      onClick={onClick}
+      disabled={disabled}
       whileHover={disabled ? {} : { scale: 1.03, opacity: 1 }}
       whileTap={disabled ? {} : { scale: 0.98 }}
       style={{ boxShadow: glowStyle }}
@@ -337,9 +338,10 @@ const OptionButton = ({ option, selected, onClick, index, isCorrect, isWrong, di
         relative flex-1 py-4 px-4 rounded-xl font-semibold text-center
         transition-all duration-300 min-h-[60px]
         ${buttonClass}
-        ${disabled ? 'cursor-default' : ''}
+        ${disabled ? 'cursor-not-allowed pointer-events-none' : ''}
       `}
-      onClick={disabled ? undefined : onClick}
+      onClick={onClick}
+      disabled={disabled}
       whileHover={disabled ? {} : { scale: 1.02 }}
       whileTap={disabled ? {} : { scale: 0.98 }}
       initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
