@@ -220,5 +220,62 @@ export default function adminRouter(pool) {
     }
   });
 
+  // Delete a user and their predictions
+  router.delete('/users/:userId', verifyAdminPin, async (req, res) => {
+    const client = await pool.connect();
+    try {
+      const { userId } = req.params;
+
+      await client.query('BEGIN');
+
+      // Delete user's predictions first (foreign key constraint)
+      await client.query('DELETE FROM predictions WHERE user_id = $1', [userId]);
+
+      // Delete the user
+      const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING nickname', [userId]);
+
+      if (result.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      await client.query('COMMIT');
+
+      res.json({ success: true, nickname: result.rows[0].nickname });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: 'Error al eliminar usuario' });
+    } finally {
+      client.release();
+    }
+  });
+
+  // Reset user PIN
+  router.post('/users/:userId/reset-pin', verifyAdminPin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { newPin } = req.body;
+
+      if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+        return res.status(400).json({ error: 'PIN debe ser de 4 dígitos' });
+      }
+
+      const result = await pool.query(
+        'UPDATE users SET pin = $1 WHERE id = $2 RETURNING nickname',
+        [newPin, userId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      res.json({ success: true, nickname: result.rows[0].nickname });
+    } catch (error) {
+      console.error('Error resetting PIN:', error);
+      res.status(500).json({ error: 'Error al reiniciar PIN' });
+    }
+  });
+
   return router;
 }

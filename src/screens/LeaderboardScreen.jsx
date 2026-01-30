@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useSSE } from '../hooks/useSSE';
 import { getLeaderboard } from '../services/api';
+import { useSafari } from '../contexts/SafariContext';
 
 // Dummy users for demo visualization (10 pts per question, 20 pts for winner)
 const dummyUsers = [
@@ -27,6 +28,7 @@ const dummyUsers = [
 ];
 
 const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
+  const { shouldReduceEffects } = useSafari();
   const [leaderboard, setLeaderboard] = useState([]);
   const [settings, setSettings] = useState({ responsesVisible: false, predictionsLocked: false });
   const [correctAnswers, setCorrectAnswers] = useState({});
@@ -117,12 +119,15 @@ const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
     }
   };
 
+  // Safari: use reduced blur class
+  const blurClass = shouldReduceEffects ? 'blur-xl' : 'blur-[100px]';
+
   return (
     <div className="min-h-screen bg-dark-900 relative overflow-hidden">
-      {/* Background */}
+      {/* Background - reduced blur in Safari */}
       <div className="absolute inset-0 bg-gradient-to-b from-sb-magenta/5 via-transparent to-sb-purple/5" />
-      <div className="absolute top-1/4 -left-32 w-64 h-64 bg-sb-magenta/10 rounded-full blur-[100px]" />
-      <div className="absolute bottom-1/4 -right-32 w-64 h-64 bg-sb-cyan/10 rounded-full blur-[100px]" />
+      <div className={`absolute top-1/4 -left-32 w-64 h-64 bg-sb-magenta/10 rounded-full ${blurClass}`} />
+      <div className={`absolute bottom-1/4 -right-32 w-64 h-64 bg-sb-cyan/10 rounded-full ${blurClass}`} />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Header */}
@@ -230,14 +235,11 @@ const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
             </div>
           ) : (
             <div className="space-y-2">
-              <AnimatePresence>
-                {leaderboard.map((entry, index) => (
-                  <motion.div
+              {/* Safari: use simple divs without AnimatePresence for better performance */}
+              {shouldReduceEffects ? (
+                leaderboard.map((entry) => (
+                  <div
                     key={entry.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.05 }}
                     className={`
                       p-3 rounded-xl border transition-all
                       ${getPositionBg(entry.position)}
@@ -274,9 +276,57 @@ const LeaderboardScreen = ({ user, onViewTicket, onBack }) => {
                         <div className="text-xs text-white/40">pts</div>
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                  </div>
+                ))
+              ) : (
+                <AnimatePresence>
+                  {leaderboard.map((entry, index) => (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`
+                        p-3 rounded-xl border transition-all
+                        ${getPositionBg(entry.position)}
+                        ${entry.id === user?.id ? 'ring-2 ring-sb-magenta' : ''}
+                      `}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Position */}
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                          {getPositionIcon(entry.position)}
+                        </div>
+
+                        {/* Name */}
+                        <div className="flex-1 min-w-0">
+                          <div className={`font-semibold truncate ${entry.id === user?.id ? 'text-sb-magenta' : 'text-white'}`}>
+                            {entry.nickname}
+                            {entry.id === user?.id && <span className="text-xs ml-2 text-white/50">(tú)</span>}
+                          </div>
+                          <div className="text-xs text-white/40">
+                            {entry.correctCount} aciertos
+                          </div>
+                        </div>
+
+                        {/* Score */}
+                        <div className="text-right">
+                          <div className={`text-xl font-bold ${
+                            entry.position === 1 ? 'text-yellow-400' :
+                            entry.position === 2 ? 'text-gray-300' :
+                            entry.position === 3 ? 'text-orange-400' :
+                            'text-white'
+                          }`}>
+                            {entry.score}
+                          </div>
+                          <div className="text-xs text-white/40">pts</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
             </div>
           )}
 

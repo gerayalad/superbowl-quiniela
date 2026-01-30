@@ -140,6 +140,21 @@ export async function getParticipants(pin) {
   });
 }
 
+export async function deleteUser(pin, userId) {
+  return fetchApi(`/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: { 'x-admin-pin': pin },
+  });
+}
+
+export async function resetUserPin(pin, userId, newPin) {
+  return fetchApi(`/admin/users/${userId}/reset-pin`, {
+    method: 'POST',
+    headers: { 'x-admin-pin': pin },
+    body: JSON.stringify({ newPin }),
+  });
+}
+
 // SSE stream URL
 export function getLeaderboardStreamUrl() {
   return `${API_URL}/api/leaderboard/stream`;

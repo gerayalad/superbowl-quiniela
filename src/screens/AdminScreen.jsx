@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Lock, Unlock, Eye, EyeOff, Check, X,
   ChevronLeft, ChevronDown, ChevronUp, Users, RefreshCw,
-  AlertCircle, Trophy
+  AlertCircle, Trophy, Trash2, KeyRound
 } from 'lucide-react';
 import {
   verifyAdminPin, getAdminSettings, updateAdminSettings,
   markCorrectAnswer, removeCorrectAnswer, getCorrectAnswers,
-  getParticipants
+  getParticipants, deleteUser, resetUserPin
 } from '../services/api';
 import { questions } from '../data/questions';
 import { useSSE } from '../hooks/useSSE';
@@ -32,6 +32,12 @@ const AdminScreen = ({ onBack }) => {
   // Participants
   const [participants, setParticipants] = useState([]);
   const [showParticipants, setShowParticipants] = useState(false);
+
+  // User management modals
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [userToResetPin, setUserToResetPin] = useState(null);
+  const [newPin, setNewPin] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Status messages
   const [statusMessage, setStatusMessage] = useState(null);
@@ -158,6 +164,38 @@ const AdminScreen = ({ onBack }) => {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setActionLoading(true);
+    try {
+      await deleteUser(pin, userToDelete.id);
+      setParticipants(prev => prev.filter(p => p.id !== userToDelete.id));
+      showStatus(`Usuario "${userToDelete.nickname}" eliminado`);
+      setUserToDelete(null);
+    } catch (error) {
+      showStatus(error.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetPin = async () => {
+    if (!userToResetPin || newPin.length !== 4) return;
+
+    setActionLoading(true);
+    try {
+      await resetUserPin(pin, userToResetPin.id, newPin);
+      showStatus(`PIN de "${userToResetPin.nickname}" reiniciado`);
+      setUserToResetPin(null);
+      setNewPin('');
+    } catch (error) {
+      showStatus(error.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getCategoryColor = (category) => {
     switch (category) {
       case 'pregame': return 'text-blue-400 bg-blue-500/20';
@@ -261,6 +299,136 @@ const AdminScreen = ({ onBack }) => {
                       text-white font-medium shadow-lg`}
           >
             {statusMessage.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete User Modal */}
+      <AnimatePresence>
+        {userToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/70"
+              onClick={() => setUserToDelete(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm p-6 rounded-2xl bg-dark-800 border border-white/10"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 border border-red-500/30
+                              flex items-center justify-center">
+                  <Trash2 className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">¿Eliminar usuario?</h3>
+                <p className="text-white/60 text-sm mb-6">
+                  Se eliminará a <span className="font-bold text-white">{userToDelete.nickname}</span> y todas sus predicciones. Esta acción no se puede deshacer.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setUserToDelete(null)}
+                    className="flex-1 py-3 rounded-xl font-medium text-white/70
+                             bg-white/10 hover:bg-white/15 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDeleteUser}
+                    disabled={actionLoading}
+                    className="flex-1 py-3 rounded-xl font-bold text-white
+                             bg-red-500 hover:bg-red-600 transition-colors
+                             disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {actionLoading ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset PIN Modal */}
+      <AnimatePresence>
+        {userToResetPin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/70"
+              onClick={() => { setUserToResetPin(null); setNewPin(''); }}
+            />
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm p-6 rounded-2xl bg-dark-800 border border-white/10"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 border border-blue-500/30
+                              flex items-center justify-center">
+                  <KeyRound className="w-8 h-8 text-blue-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Reiniciar PIN</h3>
+                <p className="text-white/60 text-sm mb-4">
+                  Ingresa el nuevo PIN para <span className="font-bold text-white">{userToResetPin.nickname}</span>
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••"
+                  className="w-full px-4 py-4 rounded-xl bg-white/5 border border-white/10
+                           text-white text-center text-2xl tracking-[0.5em] placeholder-white/30
+                           focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-6"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setUserToResetPin(null); setNewPin(''); }}
+                    className="flex-1 py-3 rounded-xl font-medium text-white/70
+                             bg-white/10 hover:bg-white/15 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleResetPin}
+                    disabled={actionLoading || newPin.length !== 4}
+                    className="flex-1 py-3 rounded-xl font-bold text-white
+                             bg-blue-500 hover:bg-blue-600 transition-colors
+                             disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {actionLoading ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Guardar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -378,17 +546,42 @@ const AdminScreen = ({ onBack }) => {
                   {participants.map((p) => (
                     <div
                       key={p.id}
-                      className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between"
+                      className="p-3 rounded-xl bg-white/5 border border-white/10"
                     >
-                      <div>
-                        <div className="font-medium text-white">{p.nickname}</div>
-                        <div className="text-xs text-white/40">
-                          {p.predictions.length} predicciones
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-white">{p.nickname}</div>
+                          <div className="text-xs text-white/40">
+                            {p.predictions.length} predicciones
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {p.predictions.length === 17 && (
+                            <Check className="w-5 h-5 text-green-400" />
+                          )}
                         </div>
                       </div>
-                      {p.predictions.length === 17 && (
-                        <Check className="w-5 h-5 text-green-400" />
-                      )}
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                        <button
+                          onClick={() => setUserToResetPin(p)}
+                          className="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium
+                                   bg-blue-500/20 text-blue-400 hover:bg-blue-500/30
+                                   flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          Reiniciar PIN
+                        </button>
+                        <button
+                          onClick={() => setUserToDelete(p)}
+                          className="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium
+                                   bg-red-500/20 text-red-400 hover:bg-red-500/30
+                                   flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </motion.div>

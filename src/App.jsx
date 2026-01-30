@@ -9,6 +9,7 @@ import { questions, eventInfo, rules } from './data/questions';
 import LeaderboardScreen from './screens/LeaderboardScreen';
 import AdminScreen from './screens/AdminScreen';
 import { checkNickname, registerUser, loginUser, savePredictions, getUserPredictions, getSettings, getPublicCorrectAnswers } from './services/api';
+import { useSafari } from './contexts/SafariContext';
 
 // ============================================
 // UTILITY HOOKS
@@ -55,14 +56,14 @@ const useAnimatedNumber = (endValue) => {
 // ============================================
 
 const ParticleField = () => {
-  // Detect Safari and reduce particle count for better performance
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const particleCount = isSafari ? 5 : 25;
+  const { shouldReduceEffects } = useSafari();
+  const particleCount = shouldReduceEffects ? 8 : 25;
 
   const particles = useMemo(() =>
     Array.from({ length: particleCount }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
       delay: Math.random() * 10,
       duration: 10 + Math.random() * 10,
       size: 2 + Math.random() * 4,
@@ -71,6 +72,28 @@ const ParticleField = () => {
     })), [particleCount]
   );
 
+  // Safari: render static decorative dots
+  if (shouldReduceEffects) {
+    return (
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            className="absolute rounded-full opacity-40"
+            style={{
+              left: p.left,
+              top: p.top,
+              width: p.size,
+              height: p.size,
+              backgroundColor: p.color,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Non-Safari: animated particles
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden">
       {particles.map((p) => (
@@ -101,26 +124,32 @@ const ParticleField = () => {
   );
 };
 
-const GlassCard = ({ children, className = '', neon = false, onClick }) => (
-  <motion.div
-    className={`
-      relative overflow-hidden rounded-2xl
-      bg-gradient-to-br from-sb-magenta/10 to-sb-purple/5
-      backdrop-blur-xl border border-sb-magenta/20
-      ${neon ? 'neon-border' : ''}
-      ${onClick ? 'cursor-pointer touch-feedback' : ''}
-      ${className}
-    `}
-    onClick={onClick}
-    whileHover={onClick ? { scale: 1.02, borderColor: 'rgba(0, 245, 255, 0.3)' } : {}}
-    whileTap={onClick ? { scale: 0.98 } : {}}
-  >
-    <div className="absolute inset-0 shimmer opacity-30" />
-    <div className="relative z-10">{children}</div>
-  </motion.div>
-);
+const GlassCard = ({ children, className = '', neon = false, onClick }) => {
+  const { shouldReduceEffects } = useSafari();
+
+  return (
+    <motion.div
+      className={`
+        relative overflow-hidden rounded-2xl
+        bg-gradient-to-br from-sb-magenta/10 to-sb-purple/5
+        backdrop-blur-xl border border-sb-magenta/20
+        ${neon ? 'neon-border' : ''}
+        ${onClick ? 'cursor-pointer touch-feedback' : ''}
+        ${className}
+      `}
+      onClick={onClick}
+      whileHover={onClick ? { scale: 1.02, borderColor: 'rgba(0, 245, 255, 0.3)' } : {}}
+      whileTap={onClick ? { scale: 0.98 } : {}}
+    >
+      {/* Safari: skip shimmer animation */}
+      {!shouldReduceEffects && <div className="absolute inset-0 shimmer opacity-30" />}
+      <div className="relative z-10">{children}</div>
+    </motion.div>
+  );
+};
 
 const NeonButton = ({ children, onClick, variant = 'primary', disabled = false, className = '' }) => {
+  const { shouldReduceEffects } = useSafari();
   const variants = {
     primary: 'from-sb-magenta via-sb-fuchsia to-sb-magenta text-white font-bold shadow-lg shadow-sb-magenta/30',
     secondary: 'from-white/20 to-white/10 text-white border border-sb-magenta/30',
@@ -128,6 +157,11 @@ const NeonButton = ({ children, onClick, variant = 'primary', disabled = false, 
     seahawks: 'from-seahawks-green to-seahawks-navy text-white',
     patriots: 'from-patriots-red to-patriots-navy text-white'
   };
+
+  // Safari: simpler hover without expensive boxShadow animation
+  const hoverProps = shouldReduceEffects
+    ? { scale: disabled ? 1 : 1.05 }
+    : { scale: disabled ? 1 : 1.05, boxShadow: '0 0 30px rgba(233, 30, 140, 0.5)' };
 
   return (
     <motion.button
@@ -140,7 +174,7 @@ const NeonButton = ({ children, onClick, variant = 'primary', disabled = false, 
       `}
       onClick={onClick}
       disabled={disabled}
-      whileHover={{ scale: disabled ? 1 : 1.05, boxShadow: '0 0 30px rgba(233, 30, 140, 0.5)' }}
+      whileHover={hoverProps}
       whileTap={{ scale: disabled ? 1 : 0.95 }}
     >
       {children}
@@ -191,6 +225,7 @@ const Modal = ({ isOpen, onClose, children, title }) => (
 );
 
 const Logo = ({ size = 'large' }) => {
+  const { shouldReduceEffects } = useSafari();
   const sizes = {
     small: 'text-2xl',
     medium: 'text-4xl',
@@ -210,27 +245,46 @@ const Logo = ({ size = 'large' }) => {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.5, type: 'spring' }}
     >
-      {/* Glow effect behind logo */}
-      <motion.div
-        className={`absolute inset-0 ${glowSizes[size]} opacity-60`}
-        animate={{
-          background: [
-            'radial-gradient(circle, rgba(233,30,140,0.4) 0%, transparent 70%)',
-            'radial-gradient(circle, rgba(0,212,255,0.4) 0%, transparent 70%)',
-            'radial-gradient(circle, rgba(233,30,140,0.4) 0%, transparent 70%)'
-          ]
-        }}
-        transition={{ duration: 3, repeat: Infinity }}
-      />
-      <motion.div
-        className={`font-display font-black ${sizes[size]} tracking-wider relative z-10
-                   drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]`}
-        animate={{ textShadow: ['0 0 20px #E91E8C', '0 0 30px #00D4FF', '0 0 20px #E91E8C'] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        <span className="text-sb-magenta drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">SB</span>
-        <span className="text-sb-cyan mx-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LX</span>
-      </motion.div>
+      {/* Glow effect behind logo - static in Safari */}
+      {shouldReduceEffects ? (
+        <div
+          className={`absolute inset-0 ${glowSizes[size]} opacity-60`}
+          style={{ background: 'radial-gradient(circle, rgba(233,30,140,0.4) 0%, transparent 70%)' }}
+        />
+      ) : (
+        <motion.div
+          className={`absolute inset-0 ${glowSizes[size]} opacity-60`}
+          animate={{
+            background: [
+              'radial-gradient(circle, rgba(233,30,140,0.4) 0%, transparent 70%)',
+              'radial-gradient(circle, rgba(0,212,255,0.4) 0%, transparent 70%)',
+              'radial-gradient(circle, rgba(233,30,140,0.4) 0%, transparent 70%)'
+            ]
+          }}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
+      )}
+      {/* Text - static in Safari, animated otherwise */}
+      {shouldReduceEffects ? (
+        <div
+          className={`font-display font-black ${sizes[size]} tracking-wider relative z-10
+                     drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]`}
+          style={{ textShadow: '0 0 20px #E91E8C' }}
+        >
+          <span className="text-sb-magenta drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">SB</span>
+          <span className="text-sb-cyan mx-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LX</span>
+        </div>
+      ) : (
+        <motion.div
+          className={`font-display font-black ${sizes[size]} tracking-wider relative z-10
+                     drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]`}
+          animate={{ textShadow: ['0 0 20px #E91E8C', '0 0 30px #00D4FF', '0 0 20px #E91E8C'] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <span className="text-sb-magenta drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">SB</span>
+          <span className="text-sb-cyan mx-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LX</span>
+        </motion.div>
+      )}
       <motion.div
         className="text-xs tracking-[0.3em] text-white/70 mt-1 uppercase relative z-10
                   drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
@@ -388,6 +442,7 @@ const OptionButton = ({ option, selected, onClick, index, isCorrect, isWrong, di
 // ============================================
 
 const LandingScreen = ({ onEnter }) => {
+  const { shouldReduceEffects } = useSafari();
   const [nickname, setNickname] = useState('');
   const [pin, setPin] = useState('');
   const [step, setStep] = useState('nickname'); // 'nickname' | 'pin' | 'disclaimer'
@@ -455,13 +510,16 @@ const LandingScreen = ({ onEnter }) => {
     setError('');
   };
 
+  // Safari: use reduced blur class
+  const blurClass = shouldReduceEffects ? 'blur-xl' : 'blur-[100px]';
+
   return (
-    <div className="min-h-screen bg-animated flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className={`min-h-screen ${shouldReduceEffects ? 'bg-dark-900' : 'bg-animated'} flex flex-col items-center justify-center p-6 relative overflow-hidden`}>
       <ParticleField />
 
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 -left-32 w-64 h-64 bg-seahawks-green/20 rounded-full blur-[100px]" />
-      <div className="absolute bottom-1/4 -right-32 w-64 h-64 bg-patriots-red/20 rounded-full blur-[100px]" />
+      {/* Background glow effects - reduced blur in Safari */}
+      <div className={`absolute top-1/4 -left-32 w-64 h-64 bg-seahawks-green/20 rounded-full ${blurClass}`} />
+      <div className={`absolute bottom-1/4 -right-32 w-64 h-64 bg-patriots-red/20 rounded-full ${blurClass}`} />
 
       <motion.div
         className="relative z-10 w-full max-w-sm flex flex-col items-center"
@@ -469,14 +527,20 @@ const LandingScreen = ({ onEnter }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        {/* Logo */}
-        <motion.div
-          className="mb-8"
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <Logo size="large" />
-        </motion.div>
+        {/* Logo - static in Safari, floating animation otherwise */}
+        {shouldReduceEffects ? (
+          <div className="mb-8">
+            <Logo size="large" />
+          </div>
+        ) : (
+          <motion.div
+            className="mb-8"
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Logo size="large" />
+          </motion.div>
+        )}
 
         {/* Event Info */}
         <GlassCard className="w-full p-6 mb-6">
@@ -488,29 +552,51 @@ const LandingScreen = ({ onEnter }) => {
 
             <div className="flex items-center justify-center gap-6 py-4">
               <div className="text-center">
-                <motion.div
-                  className="w-20 h-20 mx-auto mb-2 rounded-full bg-white/10 p-1.5 flex items-center justify-center
-                            border-2 border-patriots-red/50"
-                  whileHover={{ scale: 1.1 }}
-                  animate={{ boxShadow: ['0 0 15px rgba(198,12,48,0.3)', '0 0 25px rgba(198,12,48,0.5)', '0 0 15px rgba(198,12,48,0.3)'] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <img src="/patriots.webp" alt="Patriots" className="w-full h-full object-contain drop-shadow-lg" />
-                </motion.div>
+                {/* Patriots logo - static in Safari */}
+                {shouldReduceEffects ? (
+                  <div
+                    className="w-20 h-20 mx-auto mb-2 rounded-full bg-white/10 p-1.5 flex items-center justify-center
+                              border-2 border-patriots-red/50"
+                    style={{ boxShadow: '0 0 15px rgba(198,12,48,0.4)' }}
+                  >
+                    <img src="/patriots.webp" alt="Patriots" className="w-full h-full object-contain drop-shadow-lg" />
+                  </div>
+                ) : (
+                  <motion.div
+                    className="w-20 h-20 mx-auto mb-2 rounded-full bg-white/10 p-1.5 flex items-center justify-center
+                              border-2 border-patriots-red/50"
+                    whileHover={{ scale: 1.1 }}
+                    animate={{ boxShadow: ['0 0 15px rgba(198,12,48,0.3)', '0 0 25px rgba(198,12,48,0.5)', '0 0 15px rgba(198,12,48,0.3)'] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <img src="/patriots.webp" alt="Patriots" className="w-full h-full object-contain drop-shadow-lg" />
+                  </motion.div>
+                )}
                 <div className="text-xs text-white/50 mb-1">Away</div>
                 <div className="font-bold text-white border-b-2 border-patriots-red inline-block px-1">Patriots</div>
               </div>
               <div className="text-3xl font-display text-white/40">VS</div>
               <div className="text-center">
-                <motion.div
-                  className="w-20 h-20 mx-auto mb-2 rounded-full bg-white/10 p-1.5 flex items-center justify-center
-                            border-2 border-seahawks-green/50"
-                  whileHover={{ scale: 1.1 }}
-                  animate={{ boxShadow: ['0 0 15px rgba(105,190,40,0.3)', '0 0 25px rgba(105,190,40,0.5)', '0 0 15px rgba(105,190,40,0.3)'] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <img src="/seahawks.png" alt="Seahawks" className="w-full h-full object-contain drop-shadow-lg" />
-                </motion.div>
+                {/* Seahawks logo - static in Safari */}
+                {shouldReduceEffects ? (
+                  <div
+                    className="w-20 h-20 mx-auto mb-2 rounded-full bg-white/10 p-1.5 flex items-center justify-center
+                              border-2 border-seahawks-green/50"
+                    style={{ boxShadow: '0 0 15px rgba(105,190,40,0.4)' }}
+                  >
+                    <img src="/seahawks.png" alt="Seahawks" className="w-full h-full object-contain drop-shadow-lg" />
+                  </div>
+                ) : (
+                  <motion.div
+                    className="w-20 h-20 mx-auto mb-2 rounded-full bg-white/10 p-1.5 flex items-center justify-center
+                              border-2 border-seahawks-green/50"
+                    whileHover={{ scale: 1.1 }}
+                    animate={{ boxShadow: ['0 0 15px rgba(105,190,40,0.3)', '0 0 25px rgba(105,190,40,0.5)', '0 0 15px rgba(105,190,40,0.3)'] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <img src="/seahawks.png" alt="Seahawks" className="w-full h-full object-contain drop-shadow-lg" />
+                  </motion.div>
+                )}
                 <div className="text-xs text-white/50 mb-1">Home</div>
                 <div className="font-bold text-white border-b-2 border-seahawks-green inline-block px-1">Seahawks</div>
               </div>
@@ -743,6 +829,7 @@ const LandingScreen = ({ onEnter }) => {
 // ============================================
 
 const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderboard, onViewTicket, answeredCount }) => {
+  const { shouldReduceEffects } = useSafari();
   const [showRules, setShowRules] = useState(false);
   const potAmount = (participants + 1) * eventInfo.entryFee;
   const animatedPot = useAnimatedNumber(potAmount, 2500);
@@ -756,13 +843,16 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
     }).format(num);
   };
 
+  // Safari: use reduced blur class
+  const blurClass = shouldReduceEffects ? 'blur-xl' : 'blur-[100px]';
+
   return (
-    <div className="min-h-screen bg-animated relative overflow-hidden">
+    <div className={`min-h-screen ${shouldReduceEffects ? 'bg-dark-900' : 'bg-animated'} relative overflow-hidden`}>
       <ParticleField />
 
-      {/* Background glows */}
-      <div className="absolute top-1/4 -left-32 w-64 h-64 bg-sb-magenta/20 rounded-full blur-[100px]" />
-      <div className="absolute bottom-1/4 -right-32 w-64 h-64 bg-sb-cyan/20 rounded-full blur-[100px]" />
+      {/* Background glows - reduced blur in Safari */}
+      <div className={`absolute top-1/4 -left-32 w-64 h-64 bg-sb-magenta/20 rounded-full ${blurClass}`} />
+      <div className={`absolute bottom-1/4 -right-32 w-64 h-64 bg-sb-cyan/20 rounded-full ${blurClass}`} />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Header */}
@@ -801,12 +891,13 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
                   <Gift className="w-4 h-4" />
                   <span className="text-sm uppercase tracking-wider">El Bote</span>
                 </div>
-                <motion.div
-                  className="text-4xl sm:text-5xl font-display font-black text-sb-magenta pot-animate"
+                {/* Safari: skip pot-animate class */}
+                <div
+                  className={`text-4xl sm:text-5xl font-display font-black text-sb-magenta ${shouldReduceEffects ? '' : 'pot-animate'}`}
                   style={{ textShadow: '0 0 30px rgba(233, 30, 140, 0.6)' }}
                 >
                   {formatMoney(animatedPot)}
-                </motion.div>
+                </div>
                 <div className="flex items-center justify-center gap-2 text-white/40 text-sm">
                   <Users className="w-4 h-4" />
                   <span>{participants + 1} participantes</span>
@@ -851,40 +942,62 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
             transition={{ delay: 0.4 }}
             className="mt-2"
           >
-            <motion.button
-              onClick={onStartPredictions}
-              className="w-full py-5 px-6 rounded-2xl font-black text-white text-xl
-                       bg-gradient-to-r from-sb-magenta via-sb-fuchsia to-sb-magenta
-                       shadow-xl shadow-sb-magenta/30 border-2 border-white/20
-                       relative overflow-hidden"
-              whileHover={{ scale: 1.02, boxShadow: '0 0 40px rgba(233, 30, 140, 0.5)' }}
-              whileTap={{ scale: 0.98 }}
-              animate={{
-                boxShadow: [
-                  '0 10px 40px rgba(233, 30, 140, 0.3)',
-                  '0 10px 50px rgba(233, 30, 140, 0.5)',
-                  '0 10px 40px rgba(233, 30, 140, 0.3)'
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              {/* Shimmer effect */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                animate={{ x: ['-100%', '100%'] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              />
-              <span className="relative flex flex-col items-center justify-center gap-1">
-                <span className="flex items-center gap-3 tracking-wide">
-                  <Zap className="w-7 h-7" />
-                  {answeredCount === questions.length ? 'VER MIS PREDICCIONES' : 'HACER MIS PREDICCIONES'}
-                  <ChevronRight className="w-7 h-7" />
+            {shouldReduceEffects ? (
+              /* Safari: static button without infinite animations */
+              <button
+                onClick={onStartPredictions}
+                className="w-full py-5 px-6 rounded-2xl font-black text-white text-xl
+                         bg-gradient-to-r from-sb-magenta via-sb-fuchsia to-sb-magenta
+                         shadow-xl shadow-sb-magenta/30 border-2 border-white/20
+                         relative overflow-hidden hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              >
+                <span className="relative flex flex-col items-center justify-center gap-1">
+                  <span className="flex items-center gap-3 tracking-wide">
+                    <Zap className="w-7 h-7" />
+                    {answeredCount === questions.length ? 'VER MIS PREDICCIONES' : 'HACER MIS PREDICCIONES'}
+                    <ChevronRight className="w-7 h-7" />
+                  </span>
+                  <span className="text-sm font-normal opacity-80">
+                    {answeredCount}/{questions.length} contestadas
+                  </span>
                 </span>
-                <span className="text-sm font-normal opacity-80">
-                  {answeredCount}/{questions.length} contestadas
+              </button>
+            ) : (
+              <motion.button
+                onClick={onStartPredictions}
+                className="w-full py-5 px-6 rounded-2xl font-black text-white text-xl
+                         bg-gradient-to-r from-sb-magenta via-sb-fuchsia to-sb-magenta
+                         shadow-xl shadow-sb-magenta/30 border-2 border-white/20
+                         relative overflow-hidden"
+                whileHover={{ scale: 1.02, boxShadow: '0 0 40px rgba(233, 30, 140, 0.5)' }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  boxShadow: [
+                    '0 10px 40px rgba(233, 30, 140, 0.3)',
+                    '0 10px 50px rgba(233, 30, 140, 0.5)',
+                    '0 10px 40px rgba(233, 30, 140, 0.3)'
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                {/* Shimmer effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                />
+                <span className="relative flex flex-col items-center justify-center gap-1">
+                  <span className="flex items-center gap-3 tracking-wide">
+                    <Zap className="w-7 h-7" />
+                    {answeredCount === questions.length ? 'VER MIS PREDICCIONES' : 'HACER MIS PREDICCIONES'}
+                    <ChevronRight className="w-7 h-7" />
+                  </span>
+                  <span className="text-sm font-normal opacity-80">
+                    {answeredCount}/{questions.length} contestadas
+                  </span>
                 </span>
-              </span>
-            </motion.button>
+              </motion.button>
+            )}
           </motion.div>
 
           {/* Action Buttons */}
@@ -1319,8 +1432,8 @@ const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditP
 
   // Calculate points earned
   const getPointsForQuestion = (questionId) => {
-    // Question 14 (winner) is worth 2 points, others are 1 point
-    return questionId === 14 ? 2 : 1;
+    // Question 14 (winner) is worth 20 points, others are 10 points
+    return questionId === 14 ? 20 : 10;
   };
 
   const calculateScore = () => {
@@ -1544,7 +1657,7 @@ const TicketScreen = ({ nickname, predictions, onRestart, onLeaderboard, onEditP
                           <p className="text-white/70 text-sm leading-snug">
                             {q.highlight && <Sparkles className="w-3 h-3 inline mr-1 text-yellow-400" />}
                             {q.question}
-                            {q.highlight && <span className="text-yellow-400 text-xs ml-1">(2 pts)</span>}
+                            {q.highlight && <span className="text-yellow-400 text-xs ml-1">(20 pts)</span>}
                           </p>
                           {/* Show correct answer if wrong */}
                           {isWrong && (
