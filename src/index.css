@@ -48,6 +48,20 @@ body {
   border: 1px solid rgba(233, 30, 140, 0.15);
 }
 
+/* Safari fallback - reduced blur for better performance */
+@supports (-webkit-touch-callout: none) {
+  .glass-dark {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(13, 0, 21, 0.92);
+  }
+
+  .glass {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
 /* Neon text effect - magenta/cyan */
 .neon-text {
   text-shadow:

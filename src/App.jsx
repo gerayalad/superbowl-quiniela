@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy, Users, DollarSign, ChevronRight, ChevronLeft,
@@ -37,28 +37,15 @@ const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue];
 };
 
-const useAnimatedNumber = (endValue, duration = 2000) => {
-  const [displayValue, setDisplayValue] = useState(0);
+const useAnimatedNumber = (endValue) => {
+  const ref = useRef(null);
+  const [displayValue, setDisplayValue] = useState(endValue);
 
   useEffect(() => {
-    let startTime;
-    let animationFrame;
-    const startValue = displayValue;
-
-    const animate = (timestamp) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      const current = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
-      setDisplayValue(current);
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrame);
-  }, [endValue, duration]);
+    // Use CSS-based animation to avoid re-renders
+    // Simply update the display value without animation frame loop
+    setDisplayValue(endValue);
+  }, [endValue]);
 
   return displayValue;
 };
@@ -68,8 +55,12 @@ const useAnimatedNumber = (endValue, duration = 2000) => {
 // ============================================
 
 const ParticleField = () => {
+  // Detect Safari and reduce particle count for better performance
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const particleCount = isSafari ? 5 : 25;
+
   const particles = useMemo(() =>
-    Array.from({ length: 25 }, (_, i) => ({
+    Array.from({ length: particleCount }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       delay: Math.random() * 10,
@@ -77,7 +68,7 @@ const ParticleField = () => {
       size: 2 + Math.random() * 4,
       // SB LX colors: magenta, cyan, purple, gold
       color: ['#E91E8C', '#00D4FF', '#7C3AED', '#FACC15'][Math.floor(Math.random() * 4)]
-    })), []
+    })), [particleCount]
   );
 
   return (
