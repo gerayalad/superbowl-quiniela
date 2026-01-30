@@ -5,6 +5,7 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     nickname VARCHAR(20) UNIQUE NOT NULL,
+    pin_hash VARCHAR(64),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS predictions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     question_id INTEGER NOT NULL,
-    answer VARCHAR(100) NOT NULL,
+    answer VARCHAR(100),
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, question_id)
 );
