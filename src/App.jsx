@@ -1514,8 +1514,8 @@ export default function App() {
 
   return (
     <>
-      {/* Admin button - always visible in corner */}
-      {screen !== 'admin' && (
+      {/* Admin button - only visible on dashboard */}
+      {screen === 'dashboard' && (
         <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
