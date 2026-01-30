@@ -71,11 +71,38 @@ app.get('/api/settings', async (req, res) => {
     const settings = result.rows[0] || { responses_visible: false, predictions_locked: false };
     res.json({
       responsesVisible: settings.responses_visible,
+      answersVisible: settings.responses_visible, // Alias for frontend compatibility
       predictionsLocked: settings.predictions_locked
     });
   } catch (error) {
     console.error('Error getting settings:', error);
     res.status(500).json({ error: 'Error al obtener configuración' });
+  }
+});
+
+// Public correct answers (only returns when answersVisible is true)
+app.get('/api/answers', async (req, res) => {
+  try {
+    // First check if answers should be visible
+    const settingsResult = await pool.query('SELECT responses_visible FROM game_settings WHERE id = 1');
+    const settings = settingsResult.rows[0];
+
+    if (!settings || !settings.responses_visible) {
+      return res.json({}); // Return empty if not visible
+    }
+
+    // Get correct answers
+    const result = await pool.query('SELECT question_id, answer FROM correct_answers ORDER BY question_id');
+
+    const answers = {};
+    result.rows.forEach(row => {
+      answers[row.question_id] = row.answer;
+    });
+
+    res.json(answers);
+  } catch (error) {
+    console.error('Error getting public answers:', error);
+    res.status(500).json({ error: 'Error al obtener respuestas' });
   }
 });
 
