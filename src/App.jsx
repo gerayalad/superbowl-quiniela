@@ -1044,6 +1044,41 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
             </button>
           </motion.div>
 
+          {/* Payment Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <GlassCard className="p-4">
+              <div className="text-center mb-3">
+                <p className="text-white/60 text-sm">
+                  <DollarSign className="w-4 h-4 inline mr-1" />
+                  Pásale al admin o transfiere a:
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                <p className="text-xs text-white/50 mb-1">CLABE</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-white font-mono text-sm font-bold tracking-wide">638180000167452773</p>
+                  <button
+                    onClick={(e) => {
+                      navigator.clipboard.writeText('638180000167452773');
+                      const btn = e.currentTarget;
+                      btn.classList.add('bg-green-500/30');
+                      setTimeout(() => btn.classList.remove('bg-green-500/30'), 1500);
+                    }}
+                    className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
+                    title="Copiar CLABE"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-white/50 mt-2">Nu México - Gerardo Ayala</p>
+              </div>
+            </GlassCard>
+          </motion.div>
+
           {/* Event info small */}
           <motion.p
             initial={{ opacity: 0 }}
