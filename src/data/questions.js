@@ -154,8 +154,8 @@ export const eventInfo = {
 
 export const rules = [
   "La entrada es de $500 MXN por participante.",
-  "Cada pregunta acertada vale 1 punto.",
-  "La pregunta del ganador vale 2 puntos.",
+  "Cada pregunta acertada vale 10 puntos.",
+  "La pregunta del ganador vale 20 puntos.",
   "En caso de empate, gana quien haya acertado el total de puntos.",
   "El ganador se lleva el 70% del bote.",
   "Segundo lugar se lleva el 20% del bote.",
