@@ -149,11 +149,11 @@ export const eventInfo = {
   },
   halftime: "Bad Bunny",
   anthem: "Charlie Puth",
-  entryFee: 1000
+  entryFee: 500
 };
 
 export const rules = [
-  "La entrada es de $1,000 MXN por participante.",
+  "La entrada es de $500 MXN por participante.",
   "Cada pregunta acertada vale 1 punto.",
   "La pregunta del ganador vale 2 puntos.",
   "En caso de empate, gana quien haya acertado el total de puntos.",

@@ -762,10 +762,10 @@ const LandingScreen = ({ onEnter }) => {
               animate={{ scale: [1, 1.02, 1] }}
               transition={{ duration: 1, repeat: Infinity }}
             >
-              $1,000 MXN
+              $500 MXN
             </motion.h4>
             <p className="text-white/90">
-              La entrada a la <span className="font-bold text-sb-magenta">quiniela</span> es de 1,000 pesos. Tienes hasta 5 min antes de que inicie el partido para meter tus resultados.
+              La entrada a la <span className="font-bold text-sb-magenta">quiniela</span> es de 500 pesos. Tienes hasta 5 min antes de que inicie el partido para meter tus resultados.
             </p>
             <p className="text-white/60 text-sm">
               Pásaselos al admin o transfiere a:
