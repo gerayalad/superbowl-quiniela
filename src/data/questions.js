@@ -157,9 +157,7 @@ export const rules = [
   "Cada pregunta acertada vale 10 puntos.",
   "La pregunta del ganador vale 20 puntos.",
   "En caso de empate, gana quien haya acertado el total de puntos.",
-  "El ganador se lleva el 70% del bote.",
-  "Segundo lugar se lleva el 20% del bote.",
-  "Tercer lugar se lleva el 10% del bote.",
+  "El ganador se lleva el 100% del bote.",
   "Las predicciones se cierran al inicio del partido.",
   "El admin tiene la última palabra en casos de controversia."
 ];

@@ -916,30 +916,18 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
             </GlassCard>
           </motion.div>
 
-          {/* Prize Distribution */}
+          {/* Prize - Winner takes all */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
             <GlassCard className="p-4">
-              <div className="flex items-center justify-around text-center">
+              <div className="flex items-center justify-center text-center">
                 <div className="space-y-1">
-                  <Crown className="w-6 h-6 mx-auto text-yellow-400" />
-                  <div className="text-xs text-white/50">1er Lugar</div>
-                  <div className="font-bold text-white">{formatMoney(potAmount * 0.7)}</div>
-                </div>
-                <div className="w-px h-12 bg-white/10" />
-                <div className="space-y-1">
-                  <Award className="w-5 h-5 mx-auto text-gray-400" />
-                  <div className="text-xs text-white/50">2do Lugar</div>
-                  <div className="font-bold text-white/70">{formatMoney(potAmount * 0.2)}</div>
-                </div>
-                <div className="w-px h-12 bg-white/10" />
-                <div className="space-y-1">
-                  <Star className="w-5 h-5 mx-auto text-orange-400" />
-                  <div className="text-xs text-white/50">3er Lugar</div>
-                  <div className="font-bold text-white/50">{formatMoney(potAmount * 0.1)}</div>
+                  <Crown className="w-8 h-8 mx-auto text-yellow-400" />
+                  <div className="text-sm text-white/50">Winner takes it all</div>
+                  <div className="font-bold text-xl text-white">{formatMoney(potAmount)}</div>
                 </div>
               </div>
             </GlassCard>
