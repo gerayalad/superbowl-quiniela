@@ -85,6 +85,11 @@ export async function getSettings() {
   return fetchApi('/settings');
 }
 
+// Public correct answers (only returns data when answersVisible is true)
+export async function getPublicCorrectAnswers() {
+  return fetchApi('/answers');
+}
+
 // Admin
 export async function verifyAdminPin(pin) {
   return fetchApi('/admin/verify', {

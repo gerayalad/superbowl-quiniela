@@ -8,7 +8,7 @@ import {
 import { questions, eventInfo, rules } from './data/questions';
 import LeaderboardScreen from './screens/LeaderboardScreen';
 import AdminScreen from './screens/AdminScreen';
-import { checkNickname, registerUser, loginUser, savePredictions, getUserPredictions, getSettings } from './services/api';
+import { checkNickname, registerUser, loginUser, savePredictions, getUserPredictions, getSettings, getPublicCorrectAnswers } from './services/api';
 
 // ============================================
 // UTILITY HOOKS
@@ -244,7 +244,7 @@ const Logo = ({ size = 'large' }) => {
   );
 };
 
-const TeamBadge = ({ team, selected, onClick }) => {
+const TeamBadge = ({ team, selected, onClick, isCorrect, isWrong, disabled }) => {
   const isSeahawks = team === 'Seahawks';
   const gradient = isSeahawks
     ? 'from-seahawks-green/90 to-seahawks-navy'
@@ -252,20 +252,31 @@ const TeamBadge = ({ team, selected, onClick }) => {
   const glowColor = isSeahawks ? '#69BE28' : '#C60C30';
   const logoSrc = isSeahawks ? '/seahawks.png' : '/patriots.webp';
 
+  // Determine border color based on state
+  let borderClass = selected ? 'border-white shadow-xl scale-[1.02]' : 'border-white/20 opacity-80';
+  let glowStyle = selected ? `0 0 35px ${glowColor}` : 'none';
+
+  if (isCorrect) {
+    borderClass = 'border-green-400 shadow-xl scale-[1.02]';
+    glowStyle = '0 0 35px #22c55e';
+  } else if (isWrong) {
+    borderClass = 'border-red-500 shadow-xl scale-[1.02]';
+    glowStyle = '0 0 35px #ef4444';
+  }
+
   return (
     <motion.button
       className={`
         relative flex-1 py-5 px-4 rounded-2xl font-bold text-white text-center
         bg-gradient-to-br ${gradient}
         border-2 transition-all duration-300
-        ${selected ? 'border-white shadow-xl scale-[1.02]' : 'border-white/20 opacity-80'}
+        ${borderClass}
+        ${disabled ? 'cursor-default' : ''}
       `}
-      onClick={onClick}
-      whileHover={{ scale: 1.03, opacity: 1 }}
-      whileTap={{ scale: 0.98 }}
-      style={{
-        boxShadow: selected ? `0 0 35px ${glowColor}` : 'none'
-      }}
+      onClick={disabled ? undefined : onClick}
+      whileHover={disabled ? {} : { scale: 1.03, opacity: 1 }}
+      whileTap={disabled ? {} : { scale: 0.98 }}
+      style={{ boxShadow: glowStyle }}
     >
       <div className="flex flex-col items-center gap-3">
         <div className="w-16 h-16 mx-auto rounded-xl bg-white/25 p-2 flex items-center justify-center
@@ -274,7 +285,28 @@ const TeamBadge = ({ team, selected, onClick }) => {
         </div>
         <span className="text-base font-bold tracking-wide drop-shadow-md">{team}</span>
       </div>
-      {selected && (
+      {/* Show correct checkmark */}
+      {isCorrect && (
+        <motion.div
+          className="absolute -top-2 -right-2 bg-green-500 rounded-full p-1.5 shadow-lg"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        >
+          <Check className="w-4 h-4 text-white" />
+        </motion.div>
+      )}
+      {/* Show wrong X */}
+      {isWrong && (
+        <motion.div
+          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1.5 shadow-lg"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        >
+          <X className="w-4 h-4 text-white" />
+        </motion.div>
+      )}
+      {/* Show selected checkmark (only when not showing correct/wrong) */}
+      {selected && !isCorrect && !isWrong && (
         <motion.div
           className="absolute -top-2 -right-2 bg-white rounded-full p-1.5 shadow-lg"
           initial={{ scale: 0 }}
@@ -287,25 +319,56 @@ const TeamBadge = ({ team, selected, onClick }) => {
   );
 };
 
-const OptionButton = ({ option, selected, onClick, index }) => {
+const OptionButton = ({ option, selected, onClick, index, isCorrect, isWrong, disabled }) => {
+  // Determine styling based on state
+  let buttonClass = selected
+    ? 'bg-gradient-to-r from-sb-magenta to-sb-cyan text-white border-2 border-sb-magenta'
+    : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 hover:border-white/20';
+
+  if (isCorrect) {
+    buttonClass = 'bg-gradient-to-r from-green-500/30 to-green-600/30 text-white border-2 border-green-500';
+  } else if (isWrong) {
+    buttonClass = 'bg-gradient-to-r from-red-500/30 to-red-600/30 text-white border-2 border-red-500';
+  }
+
   return (
     <motion.button
       className={`
         relative flex-1 py-4 px-4 rounded-xl font-semibold text-center
         transition-all duration-300 min-h-[60px]
-        ${selected
-          ? 'bg-gradient-to-r from-sb-magenta to-sb-cyan text-white border-2 border-sb-magenta'
-          : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 hover:border-white/20'}
+        ${buttonClass}
+        ${disabled ? 'cursor-default' : ''}
       `}
-      onClick={onClick}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      onClick={disabled ? undefined : onClick}
+      whileHover={disabled ? {} : { scale: 1.02 }}
+      whileTap={disabled ? {} : { scale: 0.98 }}
       initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.1 * index }}
     >
       <span className="text-sm sm:text-base leading-tight">{option}</span>
-      {selected && (
+      {/* Show correct checkmark */}
+      {isCorrect && (
+        <motion.div
+          className="absolute -top-2 -right-2 bg-green-500 rounded-full p-1 shadow-lg"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        >
+          <Check className="w-3 h-3 text-white" />
+        </motion.div>
+      )}
+      {/* Show wrong X */}
+      {isWrong && (
+        <motion.div
+          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-lg"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        >
+          <X className="w-3 h-3 text-white" />
+        </motion.div>
+      )}
+      {/* Show selected checkmark (only when not showing correct/wrong) */}
+      {selected && !isCorrect && !isWrong && (
         <motion.div
           className="absolute -top-2 -right-2 bg-sb-magenta rounded-full p-1 shadow-lg"
           initial={{ scale: 0 }}
@@ -896,7 +959,7 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
 // PREDICTIONS SCREEN
 // ============================================
 
-const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onComplete, onBack }) => {
+const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onComplete, onBack, predictionsLocked, answersVisible, correctAnswers }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -931,6 +994,9 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
   };
 
   const handleSelect = async (option) => {
+    // Don't allow changes if predictions are locked
+    if (predictionsLocked) return;
+
     // Update local state immediately
     const newPredictions = {
       ...predictions,
@@ -959,6 +1025,10 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
       }
     }, 300);
   };
+
+  // Get correct answer for current question
+  const currentCorrectAnswer = correctAnswers[currentQuestion.id] || correctAnswers[String(currentQuestion.id)];
+  const userAnswer = predictions[currentQuestion.id] || predictions[String(currentQuestion.id)];
 
   const canFinish = Object.keys(predictions).length === questions.length;
 
@@ -1030,6 +1100,15 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
             </div>
           </div>
         </header>
+
+        {/* Locked banner */}
+        {predictionsLocked && (
+          <div className="bg-yellow-500/20 border-b border-yellow-500/30 px-4 py-2">
+            <p className="text-center text-yellow-300 text-sm">
+              🔒 Las predicciones están bloqueadas {answersVisible && '- Revisa tus resultados'}
+            </p>
+          </div>
+        )}
 
         <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6 flex flex-col">
           {/* Question Card */}
@@ -1108,26 +1187,44 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
                 <div className="space-y-3 mt-6">
                   {currentQuestion.options[0] === 'Seahawks' || currentQuestion.options[0] === 'Patriots' ? (
                     <div className="flex gap-3">
-                      {currentQuestion.options.map((option, idx) => (
-                        <TeamBadge
-                          key={option}
-                          team={option}
-                          selected={predictions[currentQuestion.id] === option}
-                          onClick={() => handleSelect(option)}
-                        />
-                      ))}
+                      {currentQuestion.options.map((option, idx) => {
+                        const isSelected = predictions[currentQuestion.id] === option;
+                        const isThisCorrect = answersVisible && currentCorrectAnswer === option;
+                        const isThisWrong = answersVisible && isSelected && currentCorrectAnswer && currentCorrectAnswer !== option;
+
+                        return (
+                          <TeamBadge
+                            key={option}
+                            team={option}
+                            selected={isSelected}
+                            onClick={() => handleSelect(option)}
+                            isCorrect={isThisCorrect}
+                            isWrong={isThisWrong}
+                            disabled={predictionsLocked}
+                          />
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className={`${currentQuestion.options.length > 2 ? 'grid grid-cols-2 gap-3' : 'flex gap-3'}`}>
-                      {currentQuestion.options.map((option, idx) => (
-                        <OptionButton
-                          key={option}
-                          option={option}
-                          index={idx}
-                          selected={predictions[currentQuestion.id] === option}
-                          onClick={() => handleSelect(option)}
-                        />
-                      ))}
+                      {currentQuestion.options.map((option, idx) => {
+                        const isSelected = predictions[currentQuestion.id] === option;
+                        const isThisCorrect = answersVisible && currentCorrectAnswer === option;
+                        const isThisWrong = answersVisible && isSelected && currentCorrectAnswer && currentCorrectAnswer !== option;
+
+                        return (
+                          <OptionButton
+                            key={option}
+                            option={option}
+                            index={idx}
+                            selected={isSelected}
+                            onClick={() => handleSelect(option)}
+                            isCorrect={isThisCorrect}
+                            isWrong={isThisWrong}
+                            disabled={predictionsLocked}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1144,17 +1241,32 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
 
           {/* Question dots navigation */}
           <div className="flex justify-center gap-1.5 mt-3 flex-wrap max-w-xs mx-auto">
-            {questions.map((q, i) => (
-              <button
-                key={q.id}
-                onClick={() => { setDragDirection(i > currentIndex ? -1 : 1); setCurrentIndex(i); setShowHint(false); }}
-                className={`
-                  w-2.5 h-2.5 rounded-full transition-all duration-200
-                  ${i === currentIndex ? 'bg-sb-magenta w-6' :
-                    predictions[q.id] ? 'bg-sb-cyan' : 'bg-white/20'}
-                `}
-              />
-            ))}
+            {questions.map((q, i) => {
+              const qAnswer = predictions[q.id] || predictions[String(q.id)];
+              const qCorrect = correctAnswers[q.id] || correctAnswers[String(q.id)];
+              const isAnswered = !!qAnswer;
+              const isCorrectAnswer = answersVisible && qCorrect && qAnswer === qCorrect;
+              const isWrongAnswer = answersVisible && qCorrect && qAnswer && qAnswer !== qCorrect;
+
+              let dotColor = 'bg-white/20';
+              if (i === currentIndex) {
+                dotColor = 'bg-sb-magenta w-6';
+              } else if (isCorrectAnswer) {
+                dotColor = 'bg-green-500';
+              } else if (isWrongAnswer) {
+                dotColor = 'bg-red-500';
+              } else if (isAnswered) {
+                dotColor = 'bg-sb-cyan';
+              }
+
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => { setDragDirection(i > currentIndex ? -1 : 1); setCurrentIndex(i); setShowHint(false); }}
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-200 ${dotColor}`}
+                />
+              );
+            })}
           </div>
 
           {/* Finish button */}
@@ -1416,6 +1528,8 @@ export default function App() {
   const [predictions, setPredictions] = useLocalStorage('quiniela_predictions', {});
   const [participants, setParticipants] = useState(0);
   const [predictionsLocked, setPredictionsLocked] = useState(false);
+  const [answersVisible, setAnswersVisible] = useState(false);
+  const [correctAnswers, setCorrectAnswers] = useState({});
 
   // Fetch settings and participant count on mount
   useEffect(() => {
@@ -1423,6 +1537,17 @@ export default function App() {
       try {
         const settings = await getSettings();
         setPredictionsLocked(settings.predictionsLocked);
+        setAnswersVisible(settings.answersVisible || false);
+
+        // If answers are visible, fetch correct answers
+        if (settings.answersVisible) {
+          try {
+            const answers = await getPublicCorrectAnswers();
+            setCorrectAnswers(answers || {});
+          } catch (err) {
+            console.error('Error fetching correct answers:', err);
+          }
+        }
       } catch (error) {
         console.error('Error fetching settings:', error);
       }
@@ -1585,6 +1710,9 @@ export default function App() {
               setPredictions={setPredictions}
               onComplete={handleCompletePredictions}
               onBack={handleRestart}
+              predictionsLocked={predictionsLocked}
+              answersVisible={answersVisible}
+              correctAnswers={correctAnswers}
             />
           </motion.div>
         )}
