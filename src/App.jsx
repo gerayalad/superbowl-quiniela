@@ -896,7 +896,7 @@ const DashboardScreen = ({ nickname, participants, onStartPredictions, onLeaderb
 // PREDICTIONS SCREEN
 // ============================================
 
-const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onComplete }) => {
+const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onComplete, onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1175,6 +1175,17 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
           )}
         </main>
       </div>
+
+      {/* Back to home button */}
+      <button
+        onClick={onBack}
+        className="fixed bottom-4 left-4 z-50 p-3 rounded-full bg-white/10 border border-white/20
+                 hover:bg-white/20 transition-all flex items-center gap-2"
+        title="Volver al inicio"
+      >
+        <ChevronLeft className="w-5 h-5 text-white/70" />
+        <span className="text-white/70 text-sm pr-1">Inicio</span>
+      </button>
     </div>
   );
 };
@@ -1573,6 +1584,7 @@ export default function App() {
               predictions={predictions}
               setPredictions={setPredictions}
               onComplete={handleCompletePredictions}
+              onBack={handleRestart}
             />
           </motion.div>
         )}
