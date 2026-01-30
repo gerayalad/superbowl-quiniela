@@ -1066,13 +1066,14 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
         {/* Header */}
         <header className="sticky top-0 z-20 glass-dark border-b border-white/5">
           <div className="max-w-lg mx-auto px-4 py-3">
+            {/* Back button and title row */}
             <div className="flex items-center justify-between mb-2">
               <button
-                onClick={() => { if (currentIndex > 0) { setDragDirection(1); setCurrentIndex(prev => prev - 1); setShowHint(false); }}}
-                disabled={currentIndex === 0}
-                className="p-2 rounded-full hover:bg-white/10 disabled:opacity-30 transition-colors"
+                onClick={onBack}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
               >
-                <ChevronLeft className="w-5 h-5 text-white" />
+                <ChevronLeft className="w-4 h-4" />
+                <span className="text-sm">Inicio</span>
               </button>
               <div className="text-center">
                 <span className="text-sm text-white/50">Pregunta</span>
@@ -1080,6 +1081,19 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
                   {currentIndex + 1}/{questions.length}
                 </span>
               </div>
+              <div className="w-16" /> {/* Spacer for balance */}
+            </div>
+
+            {/* Question navigation */}
+            <div className="flex items-center justify-center gap-4 mb-2">
+              <button
+                onClick={() => { if (currentIndex > 0) { setDragDirection(1); setCurrentIndex(prev => prev - 1); setShowHint(false); }}}
+                disabled={currentIndex === 0}
+                className="p-2 rounded-full hover:bg-white/10 disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 text-white" />
+              </button>
+              <span className="text-white/50 text-sm">Anterior / Siguiente</span>
               <button
                 onClick={() => { if (currentIndex < questions.length - 1) { setDragDirection(-1); setCurrentIndex(prev => prev + 1); setShowHint(false); }}}
                 disabled={currentIndex === questions.length - 1}
@@ -1287,17 +1301,6 @@ const PredictionsScreen = ({ userId, nickname, predictions, setPredictions, onCo
           )}
         </main>
       </div>
-
-      {/* Back to home button */}
-      <button
-        onClick={onBack}
-        className="fixed bottom-4 left-4 z-50 p-3 rounded-full bg-white/10 border border-white/20
-                 hover:bg-white/20 transition-all flex items-center gap-2"
-        title="Volver al inicio"
-      >
-        <ChevronLeft className="w-5 h-5 text-white/70" />
-        <span className="text-white/70 text-sm pr-1">Inicio</span>
-      </button>
     </div>
   );
 };
